@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>כרטיסי יכולות</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: linear-gradient(145deg, #1a3a1a 0%, #1a2a1a 30%, #2a1a1a 70%, #1a1a2e 100%);
+            min-height: 100vh; color: #fff; direction: rtl;
+            overflow-x: hidden; touch-action: manipulation;
+        }
+
+        .board {
+            display: none; width: 100%; min-height: 100vh;
+            flex-direction: column; align-items: center;
+            padding: 12px; gap: 12px;
+            background: radial-gradient(ellipse at center, rgba(34,85,34,0.3) 0%, transparent 70%);
+        }
+        .board.active { display: flex; }
+
+        .board-header { text-align: center; }
+        .board-header h1 { font-size: 1.4rem; margin-bottom: 4px; }
+        .board-header h2 { font-size: 0.95rem; color: #aaa; font-weight: normal; line-height: 1.5; }
+
+        .step-bar { display: flex; gap: 6px; margin-bottom: 4px; }
+        .step-pip { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+        .step-pip.active { background: #f39c12; box-shadow: 0 0 8px rgba(243,156,18,0.5); }
+        .step-pip.done { background: #27ae60; }
+
+        .counter-badge {
+            background: rgba(0,0,0,0.4); padding: 6px 18px; border-radius: 20px;
+            font-size: 0.95rem; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* ========== CARD ========== */
+        .card {
+            width: 180px; height: 126px; border-radius: 10px;
+            cursor: grab; user-select: none; position: relative;
+            transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0;
+        }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.5); }
+        .card img {
+            width: 100%; height: 100%; object-fit: contain;
+            border-radius: 10px; pointer-events: none; background: #f0f0f0;
+        }
+        .card.face-down img { object-fit: cover; background: none; }
+        .card.dragging { opacity: 0.5; transform: scale(0.95); }
+        .card.face-down { cursor: pointer; }
+        .card.small { width: 120px; height: 84px; }
+        .card.small:hover { transform: none; box-shadow: none; }
+
+        /* Stack */
+        .board-center {
+            display: flex; gap: 30px; align-items: center;
+            justify-content: center; flex-wrap: wrap; min-height: 160px;
+        }
+        .stack-area { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .stack-container { position: relative; width: 180px; height: 126px; cursor: pointer; }
+        .stack-shadow { position: absolute; width: 100%; height: 100%; border-radius: 10px; background: rgba(0,0,0,0.3); }
+        .stack-shadow:nth-child(1) { top: 6px; right: 6px; }
+        .stack-shadow:nth-child(2) { top: 3px; right: 3px; }
+        .stack-container .card { position: relative; z-index: 2; }
+        .stack-container.empty { opacity: 0.2; pointer-events: none; }
+        .stack-label { font-size: 0.8rem; color: #888; text-align: center; }
+
+        .current-card-area { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .current-card-area .card { width: 260px; height: 182px; }
+        .current-card-area .card img { border: 3px solid rgba(255,215,0,0.4); }
+
+        /* Pile zones */
+        .pile-zone {
+            min-height: 100px; border: 2px dashed rgba(255,255,255,0.15);
+            border-radius: 14px; padding: 14px 10px 10px; width: 100%;
+            display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start;
+            justify-content: center; transition: all 0.3s; position: relative;
+        }
+        .pile-zone.drag-over { border-color: rgba(255,215,0,0.6); background: rgba(255,215,0,0.05); box-shadow: inset 0 0 20px rgba(255,215,0,0.1); }
+        .pile-zone-header {
+            position: absolute; top: -12px; right: 16px;
+            background: #1a2a1a; padding: 2px 12px; border-radius: 8px;
+            font-size: 0.85rem; color: #aaa;
+        }
+        .pile-zone.discard { border-color: rgba(231,76,60,0.3); background: rgba(231,76,60,0.03); }
+        .pile-zone.keep { border-color: rgba(39,174,96,0.3); background: rgba(39,174,96,0.03); }
+        .pile-zone.love { border-color: rgba(243,156,18,0.3); background: rgba(243,156,18,0.03); }
+        .pile-zone .pile-count { position: absolute; bottom: 6px; left: 10px; font-size: 0.75rem; color: #666; }
+
+        /* Side legend */
+        .side-legend {
+            position: fixed; left: 12px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 10px;
+            background: rgba(0,0,0,0.5); padding: 12px 10px; border-radius: 12px;
+            backdrop-filter: blur(8px); z-index: 50; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .side-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #ccc; }
+        .side-legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        @media (max-width: 600px) {
+            .side-legend { position: static; transform: none; flex-direction: row; margin-bottom: 4px; padding: 6px 10px; }
+        }
+
+        /* Spread zone - cards laid out on board (step 2) */
+        .spread-zone {
+            width: 100%; display: flex; flex-wrap: wrap; gap: 8px;
+            justify-content: center; padding: 10px 0;
+        }
+
+        /* Buttons */
+        .action-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        .btn {
+            padding: 12px 28px; border: none; border-radius: 10px;
+            font-size: 1rem; font-weight: bold; cursor: pointer;
+            transition: all 0.2s; font-family: inherit;
+        }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-keep { background: linear-gradient(135deg,#27ae60,#229954); color: #fff; }
+        .btn-discard { background: linear-gradient(135deg,#95a5a6,#7f8c8d); color: #fff; }
+        .btn-love { background: linear-gradient(135deg,#f39c12,#e67e22); color: #fff; }
+        .btn-primary { background: linear-gradient(135deg,#e74c3c,#c0392b); color: #fff; }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+        .btn:not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+        /* Welcome */
+        #welcome { justify-content: center; gap: 24px; }
+        .welcome-title {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #e74c3c, #3498db, #27ae60);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .welcome-sub { font-size: 1.1rem; color: #aaa; text-align: center; line-height: 1.8; max-width: 450px; }
+        .legend { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+        .ldot { width: 14px; height: 14px; border-radius: 50%; }
+        .ldot.r { background: #e74c3c; } .ldot.b { background: #3498db; } .ldot.g { background: #27ae60; }
+
+        /* Rank */
+        .rank-list { width: 100%; max-width: 550px; display: flex; flex-direction: column; gap: 6px; }
+        .rank-item {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px; padding: 8px 12px; cursor: grab; user-select: none;
+        }
+        .rank-item.dragging { opacity: 0.4; }
+        .rank-item.drag-over { border-color: #ffd700; background: rgba(255,215,0,0.1); }
+        .rank-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+        .rank-num.n1 { background: #ffd700; color: #333; }
+        .rank-num.n2 { background: #c0c0c0; color: #333; }
+        .rank-num.n3 { background: #cd7f32; color: #fff; }
+        .rank-num:not(.n1):not(.n2):not(.n3) { background: rgba(255,255,255,0.12); }
+        .rank-text { flex: 1; font-size: 0.95rem; }
+        .rank-handle { color: #555; font-size: 1.1rem; flex-shrink: 0; }
+        .rank-img { width: 80px; height: 56px; border-radius: 6px; object-fit: contain; background: #f0f0f0; flex-shrink: 0; }
+
+        /* Results */
+        .results-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; margin: 12px 0; }
+        .res-card { border-radius: 10px; overflow: hidden; position: relative; aspect-ratio: 180/126; }
+        .res-card img { width: 100%; height: 100%; object-fit: contain; background: #f0f0f0; }
+        .res-rank {
+            position: absolute; top: 4px; right: 4px; width: 24px; height: 24px;
+            background: rgba(0,0,0,0.6); border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;
+        }
+        .summary-bar { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin: 12px 0; }
+        .sum-item { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 8px; }
+        .sum-count { font-size: 1.3rem; font-weight: bold; }
+
+        @media (max-width: 600px) {
+            .card { width: 140px; height: 98px; }
+            .card.small { width: 100px; height: 70px; }
+            .current-card-area .card { width: 220px; height: 154px; }
+            .stack-container { width: 140px; height: 98px; }
+            .welcome-title { font-size: 1.8rem; }
+            .results-grid { grid-template-columns: repeat(2, 1fr); }
+            .board-center { gap: 16px; }
+        }
+
+        @keyframes cardPop { from { opacity:0; transform:scale(0.7) rotateY(90deg); } to { opacity:1; transform:scale(1) rotateY(0); } }
+        .card-pop { animation: cardPop 0.35s ease; }
+    </style>
+</head>
+<body>
+
+<div class="side-legend" id="side-legend" style="display:none;">
+    <div class="side-legend-item"><div class="side-legend-dot" style="background:#e74c3c;"></div> אנשים</div>
+    <div class="side-legend-item"><div class="side-legend-dot" style="background:#3498db;"></div> הראש</div>
+    <div class="side-legend-item"><div class="side-legend-dot" style="background:#27ae60;"></div> ידיים</div>
+</div>
+
+<!-- WELCOME -->
+<div id="welcome" class="board active">
+    <div class="welcome-title">כרטיסי יכולות</div>
+    <div class="welcome-sub">כלי לזיהוי היכולות החזקות והאהובות שלך.<br>54 כרטיסים. 3 קטגוריות. התשובות שלך.</div>
+    <div class="legend">
+        <div class="legend-item"><div class="ldot r"></div> יכולות עם אנשים</div>
+        <div class="legend-item"><div class="ldot b"></div> יכולות עם הראש</div>
+        <div class="legend-item"><div class="ldot g"></div> יכולות בידיים</div>
+    </div>
+    <button class="btn btn-primary" onclick="startStep1()">התחל תהליך חדש</button>
+</div>
+
+<!-- STEP 1: Quick filter - discard obvious "no"s -->
+<div id="step1" class="board">
+    <div class="step-bar"><div class="step-pip active"></div><div class="step-pip"></div><div class="step-pip"></div><div class="step-pip"></div></div>
+    <div class="board-header">
+        <h1>שלב 1: סינון ראשוני</h1>
+        <h2>לחצו על הערימה כדי לגלות כרטיס.<br>אם אתם בטוחים שאין לכם את היכולת הזו — גררו אותו למטה ל"בטוח לא".<br>אם יש לכם אותה, או שאתם לא בטוחים — גררו אותו למעלה ל"נשאר".<br>אפשר להתחרט ולגרור קלפים בין הערימות.</h2>
+    </div>
+    <div class="counter-badge" id="s1-counter">נותרו 54 כרטיסים</div>
+
+    <div class="pile-zone keep" id="s1-kept" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS1(event,'keep')" style="min-height:80px;">
+        <div class="pile-zone-header">נשאר ✓</div>
+        <div class="pile-count" id="s1-kept-count">0</div>
+    </div>
+
+    <div class="board-center">
+        <div class="stack-area">
+            <div class="stack-container" id="s1-stack" onclick="flipNext1()">
+                <div class="stack-shadow"></div><div class="stack-shadow"></div>
+                <div class="card face-down" id="s1-stack-top"><img id="s1-stack-img" src="back_blue.png"></div>
+            </div>
+            <div class="stack-label" id="s1-stack-label">לחצו לגלות</div>
+        </div>
+        <div class="current-card-area" id="s1-current"></div>
+    </div>
+
+    <div class="action-row" id="s1-actions" style="display:none;">
+        <button class="btn btn-discard" onclick="s1Sort('toss')">בטוח לא ✗</button>
+    </div>
+
+    <div class="pile-zone discard" id="s1-toss" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS1(event,'toss')">
+        <div class="pile-zone-header">בטוח לא ✗</div>
+        <div class="pile-count" id="s1-toss-count">0</div>
+    </div>
+
+    <button class="btn btn-primary" id="s1-next" style="display:none;" onclick="startStep2()">סיימתי לסנן - המשך</button>
+</div>
+
+<!-- STEP 2: From remaining, spread on board. Drag to "love" or "discard". Goal: exactly 10 in love. -->
+<div id="step2" class="board">
+    <div class="step-bar"><div class="step-pip done"></div><div class="step-pip active"></div><div class="step-pip"></div><div class="step-pip"></div></div>
+    <div class="board-header">
+        <h1>שלב 2: בחרו 10 יכולות אהובות</h1>
+        <h2>לפניכם כל הכרטיסים שנשארו.<br>גררו לאזור "אהובות" את 10 היכולות שאתם הכי אוהבים לעשות.<br>את השאר גררו ל"הצידה".</h2>
+    </div>
+    <div class="counter-badge" id="s2-counter">נבחרו 0 מתוך 10</div>
+
+    <div class="pile-zone love" id="s2-love" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'love')">
+        <div class="pile-zone-header">10 האהובות ★</div>
+        <div class="pile-count" id="s2-love-count">0</div>
+    </div>
+
+    <div class="spread-zone" id="s2-spread"></div>
+
+    <div class="pile-zone discard" id="s2-toss" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'toss')">
+        <div class="pile-zone-header">הצידה ✗</div>
+        <div class="pile-count" id="s2-toss-count">0</div>
+    </div>
+
+    <button class="btn btn-primary" id="s2-next" style="display:none;" onclick="startStep3()">המשך לדירוג</button>
+</div>
+
+<!-- STEP 3: Rank -->
+<div id="step3" class="board">
+    <div class="step-bar"><div class="step-pip done"></div><div class="step-pip done"></div><div class="step-pip active"></div><div class="step-pip"></div></div>
+    <div class="board-header">
+        <h1>שלב 3: דרגו לפי אהבה</h1>
+        <h2>סדרו את 10 היכולות לפי מידת האהבה שלכם — מהאהובה ביותר (1) ועד העשירית (10).<br>גררו כרטיסים למעלה או למטה כדי לשנות את הסדר.</h2>
+    </div>
+    <div class="rank-list" id="rank-list"></div>
+    <button class="btn btn-primary" onclick="showResults()" style="margin-top:16px;">הצג תוצאות</button>
+</div>
+
+<!-- RESULTS -->
+<div id="results" class="board">
+    <div class="board-header">
+        <h1>10 היכולות החזקות שלך</h1>
+        <h2>מסודרות מהאהובה ביותר</h2>
+    </div>
+    <div class="summary-bar" id="summary"></div>
+    <div class="results-grid" id="res-grid"></div>
+    <button class="btn btn-secondary" onclick="startStep1()" style="margin-top:12px;">התחל מחדש</button>
+</div>
+
+<script>
+const CARDS = [
+    {id:1,text:"להשתמש בכושר ניתוח",cat:"head",color:"blue"},
+    {id:2,text:"לעצב",cat:"head",color:"blue"},
+    {id:3,text:"לאתר ולעבד מידע",cat:"head",color:"blue"},
+    {id:4,text:"לשפר תהליכים",cat:"head",color:"blue"},
+    {id:5,text:"לבחור מוצרים",cat:"head",color:"blue"},
+    {id:6,text:"לנסח, לכתוב, לתרגם",cat:"head",color:"blue"},
+    {id:7,text:"להשוות נתונים, להכין רשימות",cat:"head",color:"blue"},
+    {id:8,text:"להשתמש באינטואיציה",cat:"head",color:"blue"},
+    {id:9,text:"לדמיין, לחדש, להמציא",cat:"head",color:"blue"},
+    {id:10,text:"לרדת לפרטים",cat:"head",color:"blue"},
+    {id:11,text:"לתכנן, לתעדף",cat:"head",color:"blue"},
+    {id:12,text:"להלחין",cat:"head",color:"blue"},
+    {id:13,text:"לקבל החלטות",cat:"head",color:"blue"},
+    {id:14,text:"לנהל זמן",cat:"head",color:"blue"},
+    {id:15,text:"לארגן ולסדר",cat:"head",color:"blue"},
+    {id:16,text:"לזכור",cat:"head",color:"blue"},
+    {id:17,text:"לחשב",cat:"head",color:"blue"},
+    {id:18,text:"ללמוד ולחקור",cat:"head",color:"blue"},
+    {id:19,text:"לפסל",cat:"hands",color:"green"},
+    {id:20,text:"לנהוג, לנווט, לטייל",cat:"hands",color:"green"},
+    {id:21,text:"לבשל, לאפות",cat:"hands",color:"green"},
+    {id:22,text:"לייצר, להכין",cat:"hands",color:"green"},
+    {id:23,text:"לתפעל מכשירים וציוד",cat:"hands",color:"green"},
+    {id:24,text:"להשתמש ביכולות פיזיות",cat:"hands",color:"green"},
+    {id:25,text:"לתפור",cat:"hands",color:"green"},
+    {id:26,text:"להשתמש בידיים במיומנות",cat:"hands",color:"green"},
+    {id:27,text:"לעשות ספורט",cat:"hands",color:"green"},
+    {id:28,text:"לתקן",cat:"hands",color:"green"},
+    {id:29,text:"לצייר, לשרטט",cat:"hands",color:"green"},
+    {id:30,text:"לאלתר ולפתור בעיות טכניות",cat:"hands",color:"green"},
+    {id:31,text:"לנגן",cat:"hands",color:"green"},
+    {id:32,text:"לעבוד בטבע",cat:"hands",color:"green"},
+    {id:33,text:"לבנות, להרכיב",cat:"hands",color:"green"},
+    {id:34,text:"לטפל בבעלי חיים",cat:"hands",color:"green"},
+    {id:35,text:"לשמר, לשקם, לשחזר",cat:"hands",color:"green"},
+    {id:36,text:"לעבוד בדיקנות ועדינות",cat:"hands",color:"green"},
+    {id:37,text:"לקבל או לתת הנחיות",cat:"people",color:"red"},
+    {id:38,text:"להדריך, להסביר, ללמד",cat:"people",color:"red"},
+    {id:39,text:"להניע",cat:"people",color:"red"},
+    {id:40,text:"להשפיע, לעודד",cat:"people",color:"red"},
+    {id:41,text:"לטפל או לייעץ",cat:"people",color:"red"},
+    {id:42,text:"לראיין, להבחין, לגלות אנשים",cat:"people",color:"red"},
+    {id:43,text:"לנהל, לפקח",cat:"people",color:"red"},
+    {id:44,text:"לדבר ולייצר שיחה",cat:"people",color:"red"},
+    {id:45,text:"לשיר, להופיע",cat:"people",color:"red"},
+    {id:46,text:"לתת שירות",cat:"people",color:"red"},
+    {id:47,text:"לגשר",cat:"people",color:"red"},
+    {id:48,text:"ליזום, להוביל",cat:"people",color:"red"},
+    {id:49,text:"לנהל משא ומתן",cat:"people",color:"red"},
+    {id:50,text:"למכור, לשכנע",cat:"people",color:"red"},
+    {id:51,text:"לדבר מול קהל",cat:"people",color:"red"},
+    {id:52,text:"להכיל ולהקשיב",cat:"people",color:"red"},
+    {id:53,text:"לדבר בכמה שפות",cat:"people",color:"red"},
+    {id:54,text:"לחבר בין אנשים",cat:"people",color:"red"},
+];
+
+const BACKS = {blue:"back_blue.png",green:"back_green.png",red:"back_red.png"};
+const CAT_LABELS = {people:"יכולות עם אנשים",head:"יכולות עם הראש",hands:"יכולות בידיים"};
+function cardImg(id){return id+".jpg";}
+function backImg(c){return BACKS[c];}
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+
+let S={}, dragCardId=null;
+function showBoard(id){
+    document.querySelectorAll('.board').forEach(b=>b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.getElementById('side-legend').style.display=(id==='welcome'||id==='results')?'none':'flex';
+    window.scrollTo(0,0);
+}
+
+// ========== STEP 1: Quick filter ==========
+function startStep1(){
+    S={stack:shuffle(CARDS).map(c=>c.id),kept:[],tossed:[],cur:null,loved:[],spread:[],spreadToss:[],ranked:[]};
+    showBoard('step1');
+    document.getElementById('s1-current').innerHTML='';
+    document.getElementById('s1-actions').style.display='none';
+    document.getElementById('s1-toss').querySelectorAll('.card').forEach(c=>c.remove());
+    document.getElementById('s1-kept').querySelectorAll('.card').forEach(c=>c.remove());
+    document.getElementById('s1-next').style.display='none';
+    updateS1();
+}
+
+function updateS1(){
+    const rem=S.stack.length;
+    document.getElementById('s1-counter').textContent=rem>0?`נותרו ${rem} כרטיסים`:'סיימתם! לחצו המשך.';
+    document.getElementById('s1-toss-count').textContent=S.tossed.length;
+    document.getElementById('s1-kept-count').textContent=S.kept.length;
+    const sc=document.getElementById('s1-stack');
+    if(rem===0&&!S.cur){
+        sc.classList.add('empty');
+        document.getElementById('s1-next').style.display='';
+        document.getElementById('s1-stack-label').textContent='ריק';
+    } else {
+        sc.classList.remove('empty');
+        if(rem>0){
+            const nc=CARDS.find(c=>c.id===S.stack[S.stack.length-1]);
+            document.getElementById('s1-stack-img').src=backImg(nc.color);
+        }
+    }
+}
+
+function flipNext1(){
+    if(S.cur!==null||S.stack.length===0)return;
+    S.cur=S.stack.pop();
+    const card=CARDS.find(c=>c.id===S.cur);
+    const area=document.getElementById('s1-current');
+    area.innerHTML=`<div class="card card-pop" id="cur1" draggable="true" ondragstart="dragStart(event,${card.id})" data-id="${card.id}">
+        <img src="${cardImg(card.id)}" alt="${card.text}"></div>`;
+    addTouchDrag(document.getElementById('cur1'));
+    document.getElementById('s1-actions').style.display='flex';
+    updateS1();
+}
+
+function s1Sort(where){
+    if(S.cur===null)return;
+    const id=S.cur;
+    if(where==='toss'){S.tossed.push(id);addMiniCard('s1-toss',id);}
+    else{S.kept.push(id);addMiniCardFaceDown('s1-kept',id);}
+    S.cur=null;
+    document.getElementById('s1-current').innerHTML='';
+    document.getElementById('s1-actions').style.display='none';
+    updateS1();
+}
+
+function addMiniCardFaceDown(zoneId,cardId){
+    const zone=document.getElementById(zoneId);
+    const card=CARDS.find(c=>c.id===cardId);
+    const d=document.createElement('div');
+    d.className='card small face-down';d.dataset.id=cardId;d.draggable=true;
+    d.innerHTML=`<img src="${backImg(card.color)}">`;
+    d.ondragstart=(e)=>{dragCardId=parseInt(d.dataset.id);e.dataTransfer.effectAllowed='move';};
+    addTouchDrag(d);
+    const countEl=zone.querySelector('.pile-count');
+    zone.insertBefore(d,countEl);
+}
+
+function dropS1(e,where){
+    e.preventDefault();e.currentTarget.classList.remove('drag-over');
+    if(dragCardId===null)return;
+    const id=dragCardId;dragCardId=null;
+    // Current revealed card
+    if(S.cur===id){s1Sort(where);return;}
+    // Undo: drag from toss to kept
+    const idxToss=S.tossed.indexOf(id);
+    if(where==='keep'&&idxToss>-1){
+        S.tossed.splice(idxToss,1);S.kept.push(id);
+        removeMiniCard('s1-toss',id);addMiniCardFaceDown('s1-kept',id);
+        updateS1();return;
+    }
+    // Undo: drag from kept to toss
+    const idxKept=S.kept.indexOf(id);
+    if(where==='toss'&&idxKept>-1){
+        S.kept.splice(idxKept,1);S.tossed.push(id);
+        removeMiniCard('s1-kept',id);addMiniCard('s1-toss',id);
+        updateS1();return;
+    }
+}
+
+// ========== STEP 2: Spread remaining, pick 10 ==========
+function startStep2(){
+    S.spread=shuffle(S.kept);
+    S.loved=[];S.spreadToss=[];
+    showBoard('step2');
+    renderSpread();
+    document.getElementById('s2-love').querySelectorAll('.card').forEach(c=>c.remove());
+    document.getElementById('s2-toss').querySelectorAll('.card').forEach(c=>c.remove());
+    updateS2();
+}
+
+function renderSpread(){
+    const zone=document.getElementById('s2-spread');
+    zone.innerHTML='';
+    S.spread.forEach(id=>{
+        const d=document.createElement('div');
+        d.className='card small';d.dataset.id=id;d.draggable=true;
+        d.innerHTML=`<img src="${cardImg(id)}" alt="">`;
+        d.ondragstart=(e)=>{dragCardId=parseInt(d.dataset.id);e.dataTransfer.effectAllowed='move';};
+        addTouchDrag(d);
+        zone.appendChild(d);
+    });
+}
+
+function updateS2(){
+    document.getElementById('s2-counter').textContent=`נבחרו ${S.loved.length} מתוך 10 | נותרו על הלוח: ${S.spread.length}`;
+    document.getElementById('s2-love-count').textContent=S.loved.length;
+    document.getElementById('s2-toss-count').textContent=S.spreadToss.length;
+    document.getElementById('s2-next').style.display=S.loved.length===10?'':'none';
+}
+
+function dropS2(e,where){
+    e.preventDefault();e.currentTarget.classList.remove('drag-over');
+    if(dragCardId===null)return;
+    const id=dragCardId;dragCardId=null;
+
+    // From spread to love/toss
+    let idx=S.spread.indexOf(id);
+    if(idx>-1){
+        S.spread.splice(idx,1);
+        if(where==='love'&&S.loved.length<10){S.loved.push(id);addMiniCard('s2-love',id);}
+        else{S.spreadToss.push(id);addMiniCard('s2-toss',id);}
+        renderSpread();updateS2();return;
+    }
+    // From love back to spread or to toss
+    idx=S.loved.indexOf(id);
+    if(idx>-1){
+        if(where==='toss'){S.loved.splice(idx,1);S.spreadToss.push(id);removeMiniCard('s2-love',id);addMiniCard('s2-toss',id);updateS2();return;}
+    }
+    // From toss back to love or spread
+    idx=S.spreadToss.indexOf(id);
+    if(idx>-1){
+        if(where==='love'&&S.loved.length<10){S.spreadToss.splice(idx,1);S.loved.push(id);removeMiniCard('s2-toss',id);addMiniCard('s2-love',id);updateS2();return;}
+    }
+}
+
+// Also allow dropping back onto the spread zone
+document.addEventListener('DOMContentLoaded',()=>{
+    const sp=document.getElementById('s2-spread');
+    sp.addEventListener('dragover',e=>{e.preventDefault();});
+    sp.addEventListener('drop',e=>{
+        e.preventDefault();
+        if(dragCardId===null)return;
+        const id=dragCardId;dragCardId=null;
+        // From love back to spread
+        let idx=S.loved.indexOf(id);
+        if(idx>-1){S.loved.splice(idx,1);S.spread.push(id);removeMiniCard('s2-love',id);renderSpread();updateS2();return;}
+        // From toss back to spread
+        idx=S.spreadToss.indexOf(id);
+        if(idx>-1){S.spreadToss.splice(idx,1);S.spread.push(id);removeMiniCard('s2-toss',id);renderSpread();updateS2();return;}
+    });
+});
+
+// ========== HELPERS ==========
+function addMiniCard(zoneId,cardId){
+    const zone=document.getElementById(zoneId);
+    const d=document.createElement('div');
+    d.className='card small';d.dataset.id=cardId;d.draggable=true;
+    d.innerHTML=`<img src="${cardImg(cardId)}" alt="">`;
+    d.ondragstart=(e)=>{dragCardId=parseInt(d.dataset.id);e.dataTransfer.effectAllowed='move';};
+    addTouchDrag(d);
+    const countEl=zone.querySelector('.pile-count');
+    zone.insertBefore(d,countEl);
+}
+function removeMiniCard(zoneId,cardId){
+    document.getElementById(zoneId).querySelectorAll('.card.small').forEach(c=>{if(parseInt(c.dataset.id)===cardId)c.remove();});
+}
+function dragStart(e,id){dragCardId=id;e.dataTransfer.effectAllowed='move';}
+function dOver(e){e.preventDefault();e.currentTarget.classList.add('drag-over');}
+function dLeave(e){e.currentTarget.classList.remove('drag-over');}
+
+function addTouchDrag(el){
+    let clone=null;
+    el.addEventListener('touchstart',e=>{
+        dragCardId=parseInt(el.dataset.id);
+        clone=el.cloneNode(true);
+        clone.style.cssText='position:fixed;z-index:9999;pointer-events:none;opacity:0.8;width:'+el.offsetWidth+'px;';
+        document.body.appendChild(clone);
+        el.classList.add('dragging');
+    });
+    el.addEventListener('touchmove',e=>{
+        e.preventDefault();const t=e.touches[0];
+        if(clone){clone.style.left=(t.clientX-60)+'px';clone.style.top=(t.clientY-40)+'px';}
+        document.querySelectorAll('.pile-zone,.spread-zone').forEach(z=>{
+            const r=z.getBoundingClientRect();
+            if(t.clientX>=r.left&&t.clientX<=r.right&&t.clientY>=r.top&&t.clientY<=r.bottom)z.classList.add('drag-over');
+            else z.classList.remove('drag-over');
+        });
+    },{passive:false});
+    el.addEventListener('touchend',e=>{
+        if(clone){clone.remove();clone=null;}
+        el.classList.remove('dragging');
+        const zone=document.querySelector('.pile-zone.drag-over,.spread-zone.drag-over');
+        if(zone){zone.classList.remove('drag-over');zone.dispatchEvent(new Event('drop'));}
+        dragCardId=null;
+    });
+}
+
+// ========== STEP 3: RANK ==========
+function startStep3(){S.ranked=[...S.loved];showBoard('step3');renderRank();}
+function renderRank(){
+    document.getElementById('rank-list').innerHTML=S.ranked.map((id,i)=>{
+        const c=CARDS.find(x=>x.id===id);const nc=i<3?` n${i+1}`:'';
+        return`<div class="rank-item" draggable="true" data-id="${id}"
+            ondragstart="rDS(event)" ondragover="rDO(event)" ondrop="rDr(event)" ondragenter="rDE(event)" ondragleave="rDL(event)"
+            ontouchstart="rTS(event)" ontouchmove="rTM(event)" ontouchend="rTE(event)">
+            <div class="rank-num${nc}">${i+1}</div>
+            <img class="rank-img" src="${cardImg(id)}">
+            <div class="rank-text">${c.text}</div>
+            <div class="rank-handle">☰</div></div>`;
+    }).join('');
+}
+let rD=null;
+function rDS(e){rD=e.currentTarget.dataset.id;e.currentTarget.classList.add('dragging');}
+function rDO(e){e.preventDefault();}
+function rDE(e){e.preventDefault();if(e.currentTarget.dataset.id!==rD)e.currentTarget.classList.add('drag-over');}
+function rDL(e){e.currentTarget.classList.remove('drag-over');}
+function rDr(e){
+    e.preventDefault();e.currentTarget.classList.remove('drag-over');
+    const t=e.currentTarget.dataset.id;
+    if(rD&&rD!==t){const f=S.ranked.indexOf(+rD),to=S.ranked.indexOf(+t);S.ranked.splice(f,1);S.ranked.splice(to,0,+rD);renderRank();}
+    rD=null;
+}
+let rT=null;
+function rTS(e){rT=e.currentTarget;rD=rT.dataset.id;rT.classList.add('dragging');}
+function rTM(e){
+    e.preventDefault();const y=e.touches[0].clientY;
+    document.querySelectorAll('.rank-item').forEach(it=>{it.classList.remove('drag-over');const r=it.getBoundingClientRect();if(y>r.top&&y<r.bottom&&it.dataset.id!==rD)it.classList.add('drag-over');});
+}
+function rTE(e){
+    if(rT)rT.classList.remove('dragging');let t=null;
+    document.querySelectorAll('.rank-item').forEach(it=>{if(it.classList.contains('drag-over')){t=it.dataset.id;it.classList.remove('drag-over');}});
+    if(rD&&t&&rD!==t){const f=S.ranked.indexOf(+rD),to=S.ranked.indexOf(+t);S.ranked.splice(f,1);S.ranked.splice(to,0,+rD);renderRank();}
+    rD=null;rT=null;
+}
+
+// ========== RESULTS ==========
+function showResults(){
+    showBoard('results');
+    document.getElementById('res-grid').innerHTML=S.ranked.map((id,i)=>`<div class="res-card"><div class="res-rank">${i+1}</div><img src="${cardImg(id)}"></div>`).join('');
+    const cn={red:0,blue:0,green:0};
+    S.ranked.forEach(id=>{cn[CARDS.find(c=>c.id===id).color]++;});
+    document.getElementById('summary').innerHTML=[
+        {c:'red',l:CAT_LABELS.people,n:cn.red},{c:'blue',l:CAT_LABELS.head,n:cn.blue},{c:'green',l:CAT_LABELS.hands,n:cn.green}
+    ].map(x=>`<div class="sum-item"><div style="width:12px;height:12px;border-radius:50%;background:${x.c==='red'?'#e74c3c':x.c==='blue'?'#3498db':'#27ae60'}"></div><span>${x.l}:</span><span class="sum-count">${x.n}</span></div>`).join('');
+}
+</script>
+</body>
+</html>
