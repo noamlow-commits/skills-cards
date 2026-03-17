@@ -123,17 +123,52 @@
         .btn:not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.1); }
 
         /* Welcome */
-        #welcome { justify-content: center; gap: 24px; }
-        .welcome-title {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, #e74c3c, #3498db, #27ae60);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        #welcome { justify-content: center; gap: 28px; padding: 40px 20px; }
+        .welcome-cards-fan {
+            display: flex; gap: 0; justify-content: center; align-items: center;
+            margin: 10px 0; position: relative; height: 140px;
         }
-        .welcome-sub { font-size: 1.1rem; color: #aaa; text-align: center; line-height: 1.8; max-width: 450px; }
-        .legend { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
-        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
-        .ldot { width: 14px; height: 14px; border-radius: 50%; }
+        .welcome-fan-card {
+            width: 160px; height: 112px; border-radius: 10px; position: absolute;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4); transition: transform 0.4s;
+        }
+        .welcome-fan-card img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+        .welcome-fan-card:nth-child(1) { transform: rotate(-12deg) translateX(100px); z-index: 1; }
+        .welcome-fan-card:nth-child(2) { transform: rotate(0deg); z-index: 3; }
+        .welcome-fan-card:nth-child(3) { transform: rotate(12deg) translateX(-100px); z-index: 2; }
+        .welcome-title {
+            font-size: 3.5rem; font-weight: 900; letter-spacing: -1px;
+            background: linear-gradient(135deg, #e74c3c 0%, #f39c12 25%, #3498db 50%, #27ae60 75%, #e74c3c 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            animation: shimmer 4s linear infinite;
+        }
+        @keyframes shimmer { to { background-position: -200% center; } }
+        .welcome-sub {
+            font-size: 1.3rem; color: #ccc; text-align: center; line-height: 2;
+            max-width: 500px; font-weight: 300;
+        }
+        .welcome-sub strong { color: #fff; font-weight: 600; }
+        .legend {
+            display: flex; gap: 24px; flex-wrap: wrap; justify-content: center;
+            background: rgba(255,255,255,0.06); padding: 14px 28px; border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 1rem; }
+        .ldot { width: 16px; height: 16px; border-radius: 50%; }
         .ldot.r { background: #e74c3c; } .ldot.b { background: #3498db; } .ldot.g { background: #27ae60; }
+        #welcome .btn-primary {
+            font-size: 1.3rem; padding: 18px 50px; border-radius: 16px;
+            box-shadow: 0 6px 25px rgba(231,76,60,0.5);
+        }
+        @media (max-width: 600px) {
+            .welcome-title { font-size: 2.2rem; }
+            .welcome-sub { font-size: 1.05rem; }
+            .welcome-fan-card { width: 120px; height: 84px; }
+            .welcome-fan-card:nth-child(1) { transform: rotate(-12deg) translateX(70px); }
+            .welcome-fan-card:nth-child(3) { transform: rotate(12deg) translateX(-70px); }
+            .welcome-cards-fan { height: 100px; }
+        }
 
         /* Rank */
         .rank-list { width: 100%; max-width: 550px; display: flex; flex-direction: column; gap: 6px; }
@@ -190,14 +225,19 @@
 
 <!-- WELCOME -->
 <div id="welcome" class="board active">
+    <div class="welcome-cards-fan">
+        <div class="welcome-fan-card"><img src="back_red.png" alt=""></div>
+        <div class="welcome-fan-card"><img src="back_blue.png" alt=""></div>
+        <div class="welcome-fan-card"><img src="back_green.png" alt=""></div>
+    </div>
     <div class="welcome-title">כרטיסי יכולות</div>
-    <div class="welcome-sub">כלי לזיהוי היכולות החזקות והאהובות שלך.<br>54 כרטיסים. 3 קטגוריות. התשובות שלך.</div>
+    <div class="welcome-sub">גלו את <strong>היכולות החזקות</strong> שלכם<br>באמצעות <strong>54 כרטיסים</strong> ב-3 קטגוריות</div>
     <div class="legend">
         <div class="legend-item"><div class="ldot r"></div> יכולות עם אנשים</div>
         <div class="legend-item"><div class="ldot b"></div> יכולות עם הראש</div>
         <div class="legend-item"><div class="ldot g"></div> יכולות בידיים</div>
     </div>
-    <button class="btn btn-primary" onclick="startStep1()">התחל תהליך חדש</button>
+    <button class="btn btn-primary" onclick="startStep1()">בואו נתחיל</button>
 </div>
 
 <!-- STEP 1: Quick filter - discard obvious "no"s -->
