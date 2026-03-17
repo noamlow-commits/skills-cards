@@ -314,15 +314,21 @@
 
 <!-- RESULTS -->
 <div id="results" class="board">
-    <div class="board-header">
-        <h1>10 היכולות החזקות שלך</h1>
-        <h2>מסודרות מהאהובה ביותר</h2>
+    <div id="results-capture" style="padding:20px;max-width:900px;width:100%;">
+        <div class="board-header">
+            <h1>10 היכולות החזקות שלך</h1>
+            <h2>מסודרות מהאהובה ביותר</h2>
+        </div>
+        <div class="summary-bar" id="summary"></div>
+        <div class="results-grid" id="res-grid"></div>
     </div>
-    <div class="summary-bar" id="summary"></div>
-    <div class="results-grid" id="res-grid"></div>
-    <button class="btn btn-secondary" onclick="startStep1()" style="margin-top:12px;">התחל מחדש</button>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:16px;">
+        <button class="btn btn-primary" onclick="downloadResultImage()">שמור כתמונה</button>
+        <button class="btn btn-secondary" onclick="startStep1()">התחל מחדש</button>
+    </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 const CARDS = [
     {id:1,text:"להשתמש בכושר ניתוח",cat:"head",color:"blue"},
@@ -648,6 +654,23 @@ function showResults(){
     document.getElementById('summary').innerHTML=[
         {c:'red',l:CAT_LABELS.people,n:cn.red},{c:'blue',l:CAT_LABELS.head,n:cn.blue},{c:'green',l:CAT_LABELS.hands,n:cn.green}
     ].map(x=>`<div class="sum-item"><div style="width:12px;height:12px;border-radius:50%;background:${x.c==='red'?'#e74c3c':x.c==='blue'?'#3498db':'#27ae60'}"></div><span>${x.l}:</span><span class="sum-count">${x.n}</span></div>`).join('');
+}
+
+function downloadResultImage(){
+    const el=document.getElementById('results-capture');
+    // Temporarily set dark background for the capture
+    el.style.background='linear-gradient(145deg, #1a3a1a 0%, #1a2a1a 30%, #2a1a1a 70%, #1a1a2e 100%)';
+    el.style.borderRadius='16px';
+    html2canvas(el,{backgroundColor:null,scale:2,useCORS:true}).then(canvas=>{
+        el.style.background='';el.style.borderRadius='';
+        const link=document.createElement('a');
+        link.download='היכולות-שלי.png';
+        link.href=canvas.toDataURL('image/png');
+        link.click();
+    }).catch(()=>{
+        el.style.background='';el.style.borderRadius='';
+        alert('לא הצלחנו לשמור. נסו שוב.');
+    });
 }
 </script>
 </body>
