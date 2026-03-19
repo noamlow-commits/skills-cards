@@ -88,11 +88,44 @@
         .pile-zone.love { border-color: rgba(243,156,18,0.3); background: rgba(243,156,18,0.03); }
         .pile-zone .pile-count { position: absolute; bottom: 6px; left: 10px; font-size: 0.75rem; color: #666; }
 
-        /* Stack pile for face-down cards */
-        .pile-zone.stack-mode {
-            justify-content: center; align-items: center;
-            min-height: 120px; flex-wrap: nowrap;
+        /* ========== STEP 1: Card table layout ========== */
+        .s1-table {
+            display: flex; align-items: center; justify-content: center;
+            gap: 40px; width: 100%; flex: 1; min-height: 320px;
+            padding: 10px 20px;
         }
+        .s1-pile {
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            padding: 20px; border-radius: 16px; transition: all 0.3s;
+            min-width: 200px;
+        }
+        .s1-pile.drag-over {
+            background: rgba(255,255,255,0.06);
+            box-shadow: 0 0 30px rgba(255,215,0,0.15);
+        }
+        .s1-pile-label {
+            font-size: 1.05rem; font-weight: bold; color: #aaa;
+        }
+        .s1-pile.keep-pile .s1-pile-label { color: #27ae60; }
+        .s1-pile.toss-pile .s1-pile-label { color: #e74c3c; }
+        .s1-pile .pile-count { font-size: 0.85rem; color: #666; }
+        .s1-center {
+            display: flex; flex-direction: column; align-items: center; gap: 14px;
+        }
+
+        /* Bigger stack cards for step 1 piles */
+        .s1-pile .pile-stack-wrap {
+            position: relative; width: 180px; height: 126px;
+        }
+        .s1-pile .pile-stack-wrap .card {
+            position: absolute; top: 0; right: 0;
+            width: 180px; height: 126px; transition: none;
+        }
+        .s1-pile .pile-stack-wrap .card img {
+            width: 100%; height: 100%; border-radius: 10px;
+        }
+
+        /* Default pile-stack-wrap for other contexts */
         .pile-stack-wrap {
             position: relative; width: 120px; height: 84px;
         }
@@ -100,25 +133,12 @@
             position: absolute; top: 0; right: 0;
             transition: none;
         }
-        .pile-stack-wrap:empty + .pile-count::before {
-            content: 'ריק';
-        }
-        /* Kept cards overlap slightly for fan effect */
-        .pile-zone.keep .card.small {
-            margin: 0 -6px;
-        }
 
-        /* Side legend */
-        .side-legend {
-            position: fixed; left: 12px; top: 50%; transform: translateY(-50%);
-            display: flex; flex-direction: column; gap: 10px;
-            background: rgba(0,0,0,0.5); padding: 12px 10px; border-radius: 12px;
-            backdrop-filter: blur(8px); z-index: 50; border: 1px solid rgba(255,255,255,0.1);
-        }
-        .side-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #ccc; }
-        .side-legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-        @media (max-width: 600px) {
-            .side-legend { position: static; transform: none; flex-direction: row; margin-bottom: 4px; padding: 6px 10px; }
+        @media (max-width: 800px) {
+            .s1-table { flex-direction: column; gap: 20px; }
+            .s1-pile { min-width: auto; flex-direction: row; gap: 16px; padding: 12px; }
+            .s1-pile .pile-stack-wrap { width: 140px; height: 98px; }
+            .s1-pile .pile-stack-wrap .card { width: 140px; height: 98px; }
         }
 
         /* Spread zone - cards laid out on board (step 2) */
@@ -255,34 +275,40 @@
     <div class="step-bar"><div class="step-pip active"></div><div class="step-pip"></div><div class="step-pip"></div><div class="step-pip"></div></div>
     <div class="board-header">
         <h1>שלב 1: סינון ראשוני</h1>
-        <h2>לחצו על הערימה כדי לגלות כרטיס.<br>אם אתם בטוחים שאין לכם את היכולת הזו — גררו אותו למטה ל"בטוח לא".<br>אם יש לכם אותה, או שאתם לא בטוחים — גררו אותו למעלה ל"נשאר".<br>אפשר להתחרט ולגרור קלפים בין הערימות.</h2>
+        <h2>לחצו על הערימה כדי לגלות כרטיס.<br>גררו ימינה ל"נשאר" או שמאלה ל"בטוח לא". אפשר גם ללחוץ על הכפתורים.<br>אפשר להתחרט ולגרור קלפים בין החבילות.</h2>
     </div>
     <div class="counter-badge" id="s1-counter">נותרו 54 כרטיסים</div>
 
-    <div class="pile-zone keep" id="s1-kept" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS1(event,'keep')" style="min-height:80px;">
-        <div class="pile-zone-header">נשאר ✓</div>
-        <div class="pile-count" id="s1-kept-count">0</div>
-    </div>
-
-    <div class="board-center">
-        <div class="stack-area">
-            <div class="stack-container" id="s1-stack" onclick="flipNext1()">
-                <div class="stack-shadow"></div><div class="stack-shadow"></div>
-                <div class="card face-down" id="s1-stack-top"><img id="s1-stack-img" src="back_blue.png"></div>
-            </div>
-            <div class="stack-label" id="s1-stack-label">לחצו לגלות</div>
+    <div class="s1-table">
+        <!-- Right (RTL): kept pile -->
+        <div class="s1-pile keep-pile" id="s1-kept" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS1(event,'keep')">
+            <div class="s1-pile-label">נשאר ✓</div>
+            <div class="pile-stack-wrap" id="s1-kept-stack"></div>
+            <div class="pile-count" id="s1-kept-count">0</div>
         </div>
-        <div class="current-card-area" id="s1-current"></div>
-    </div>
 
-    <div class="action-row" id="s1-actions" style="display:none;">
-        <button class="btn btn-discard" onclick="s1Sort('toss')">בטוח לא ✗</button>
-    </div>
+        <!-- Center: deck + revealed card -->
+        <div class="s1-center">
+            <div class="stack-area">
+                <div class="stack-container" id="s1-stack" onclick="flipNext1()">
+                    <div class="stack-shadow"></div><div class="stack-shadow"></div>
+                    <div class="card face-down" id="s1-stack-top"><img id="s1-stack-img" src="back_blue.png"></div>
+                </div>
+                <div class="stack-label" id="s1-stack-label">לחצו לגלות</div>
+            </div>
+            <div class="current-card-area" id="s1-current"></div>
+            <div class="action-row" id="s1-actions" style="display:none;">
+                <button class="btn btn-keep" onclick="s1Sort('keep')">נשאר ✓</button>
+                <button class="btn btn-discard" onclick="s1Sort('toss')">בטוח לא ✗</button>
+            </div>
+        </div>
 
-    <div class="pile-zone discard stack-mode" id="s1-toss" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS1(event,'toss')">
-        <div class="pile-zone-header">בטוח לא ✗</div>
-        <div class="pile-stack-wrap" id="s1-toss-stack"></div>
-        <div class="pile-count" id="s1-toss-count">0</div>
+        <!-- Left (RTL): discard pile -->
+        <div class="s1-pile toss-pile" id="s1-toss" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS1(event,'toss')">
+            <div class="s1-pile-label">בטוח לא ✗</div>
+            <div class="pile-stack-wrap" id="s1-toss-stack"></div>
+            <div class="pile-count" id="s1-toss-count">0</div>
+        </div>
     </div>
 
     <button class="btn btn-primary" id="s1-next" style="display:none;" onclick="startStep2()">סיימתי לסנן - המשך</button>
@@ -418,7 +444,7 @@ function startStep1(){
     document.getElementById('s1-current').innerHTML='';
     document.getElementById('s1-actions').style.display='none';
     document.getElementById('s1-toss-stack').innerHTML='';
-    document.getElementById('s1-kept').querySelectorAll('.card').forEach(c=>c.remove());
+    document.getElementById('s1-kept-stack').innerHTML='';
     document.getElementById('s1-next').style.display='none';
     updateS1();
 }
@@ -457,22 +483,22 @@ function flipNext1(){
 function s1Sort(where){
     if(S.cur===null)return;
     const id=S.cur;
-    if(where==='toss'){S.tossed.push(id);addStackCard('s1-toss-stack',id);}
-    else{S.kept.push(id);addMiniCard('s1-kept',id);}
+    if(where==='toss'){S.tossed.push(id);addStackCard('s1-toss-stack',id,true);}
+    else{S.kept.push(id);addStackCard('s1-kept-stack',id,false);}
     S.cur=null;
     document.getElementById('s1-current').innerHTML='';
     document.getElementById('s1-actions').style.display='none';
     updateS1();
 }
 
-function addStackCard(wrapId,cardId){
+function addStackCard(wrapId,cardId,faceDown){
     const wrap=document.getElementById(wrapId);
     const card=CARDS.find(c=>c.id===cardId);
     const d=document.createElement('div');
-    d.className='card small face-down';d.dataset.id=cardId;d.draggable=true;
-    d.innerHTML=`<img src="${backImg(card.color)}">`;
+    d.className='card'+(faceDown?' face-down':'');d.dataset.id=cardId;d.draggable=true;
+    d.innerHTML=`<img src="${faceDown?backImg(card.color):cardImg(cardId)}">`;
     const n=wrap.querySelectorAll('.card').length;
-    const offset=Math.min(n,8);
+    const offset=Math.min(n,10);
     d.style.top=-offset*2+'px';
     d.style.right=offset*1.5+'px';
     d.style.zIndex=n;
@@ -483,9 +509,8 @@ function addStackCard(wrapId,cardId){
 function removeStackCard(wrapId,cardId){
     const wrap=document.getElementById(wrapId);
     wrap.querySelectorAll('.card').forEach(c=>{if(parseInt(c.dataset.id)===cardId)c.remove();});
-    // Recalc offsets
     wrap.querySelectorAll('.card').forEach((c,i)=>{
-        const offset=Math.min(i,8);
+        const offset=Math.min(i,10);
         c.style.top=-offset*2+'px';
         c.style.right=offset*1.5+'px';
         c.style.zIndex=i;
@@ -502,14 +527,14 @@ function dropS1(e,where){
     const idxToss=S.tossed.indexOf(id);
     if(where==='keep'&&idxToss>-1){
         S.tossed.splice(idxToss,1);S.kept.push(id);
-        removeStackCard('s1-toss-stack',id);addMiniCard('s1-kept',id);
+        removeStackCard('s1-toss-stack',id);addStackCard('s1-kept-stack',id,false);
         updateS1();return;
     }
     // Undo: drag from kept to toss
     const idxKept=S.kept.indexOf(id);
     if(where==='toss'&&idxKept>-1){
         S.kept.splice(idxKept,1);S.tossed.push(id);
-        removeMiniCard('s1-kept',id);addStackCard('s1-toss-stack',id);
+        removeStackCard('s1-kept-stack',id);addStackCard('s1-toss-stack',id,true);
         updateS1();return;
     }
 }
@@ -617,7 +642,7 @@ function addTouchDrag(el){
     el.addEventListener('touchmove',e=>{
         e.preventDefault();const t=e.touches[0];
         if(clone){clone.style.left=(t.clientX-60)+'px';clone.style.top=(t.clientY-40)+'px';}
-        document.querySelectorAll('.pile-zone,.spread-zone').forEach(z=>{
+        document.querySelectorAll('.pile-zone,.spread-zone,.s1-pile').forEach(z=>{
             const r=z.getBoundingClientRect();
             if(t.clientX>=r.left&&t.clientX<=r.right&&t.clientY>=r.top&&t.clientY<=r.bottom)z.classList.add('drag-over');
             else z.classList.remove('drag-over');
@@ -626,7 +651,7 @@ function addTouchDrag(el){
     el.addEventListener('touchend',e=>{
         if(clone){clone.remove();clone=null;}
         el.classList.remove('dragging');
-        const zone=document.querySelector('.pile-zone.drag-over,.spread-zone.drag-over');
+        const zone=document.querySelector('.pile-zone.drag-over,.spread-zone.drag-over,.s1-pile.drag-over');
         if(zone){zone.classList.remove('drag-over');zone.dispatchEvent(new Event('drop'));}
         dragCardId=null;
     });
