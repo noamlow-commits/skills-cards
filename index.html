@@ -163,17 +163,22 @@
         .s2-zone .pile-count {
             position: absolute; bottom: 4px; left: 10px; font-size: 0.75rem; color: #666;
         }
-        .s2-zone .card.small { width: 110px; height: 77px; }
-        .s2-zone .card.small img { border-radius: 6px; }
+        .s2-zone .card.small { width: 130px; height: 91px; }
+        .s2-zone .card.small img { border-radius: 8px; }
 
+        .s2-middle {
+            display: flex; gap: 20px; width: 100%; align-items: flex-start;
+        }
         .s2-center {
             display: flex; flex-direction: column; align-items: center; gap: 8px;
-            padding: 6px 0;
+            padding: 6px 0; flex-shrink: 0;
         }
-        .s2-center .current-card-area .card { width: 220px; height: 154px; }
+        .s2-center .current-card-area .card { width: 240px; height: 168px; }
         .s2-center .current-card-area .card img { border: 3px solid rgba(255,215,0,0.4); border-radius: 10px; }
-        .s2-center .action-row { display: flex; gap: 12px; }
+        .s2-center .action-row { display: flex; gap: 10px; }
         .s2-stack-info { font-size: 0.8rem; color: #888; }
+        .s2-maybe-side { flex: 1; min-width: 0; }
+        .s2-maybe-side .s2-zone { width: 100%; min-height: 100px; }
 
         /* Face-down stack zone for "no" pile */
         .s2-zone-stack {
@@ -376,21 +381,25 @@
         <div class="pile-count" id="s2-love-count">0</div>
     </div>
 
-    <!-- Center: face-up stack showing one card -->
-    <div class="s2-center">
-        <div class="current-card-area" id="s2-current"></div>
-        <div class="action-row" id="s2-actions" style="display:none;">
-            <button class="btn btn-love" onclick="s2Sort('love')">כן ★</button>
-            <button class="btn btn-secondary" onclick="s2Sort('maybe')">אולי</button>
-            <button class="btn btn-discard" onclick="s2Sort('no')">לא ✗</button>
+    <div class="s2-middle">
+        <!-- Right (RTL): current card + buttons -->
+        <div class="s2-center">
+            <div class="current-card-area" id="s2-current"></div>
+            <div class="action-row" id="s2-actions" style="display:none;">
+                <button class="btn btn-love" onclick="s2Sort('love')">כן ★</button>
+                <button class="btn btn-secondary" onclick="s2Sort('maybe')">אולי</button>
+                <button class="btn btn-discard" onclick="s2Sort('no')">לא ✗</button>
+            </div>
+            <div class="s2-stack-info" id="s2-stack-info"></div>
         </div>
-        <div class="s2-stack-info" id="s2-stack-info"></div>
-    </div>
 
-    <!-- Middle: maybe cards spread in rows (face up) -->
-    <div class="s2-zone" id="s2-maybe" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'maybe')">
-        <div class="s2-zone-header" style="color:#3498db;">אולי</div>
-        <div class="pile-count" id="s2-maybe-count">0</div>
+        <!-- Left (RTL): maybe cards spread -->
+        <div class="s2-maybe-side">
+            <div class="s2-zone" id="s2-maybe" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'maybe')">
+                <div class="s2-zone-header" style="color:#3498db;">אולי</div>
+                <div class="pile-count" id="s2-maybe-count">0</div>
+            </div>
+        </div>
     </div>
 
     <!-- Bottom: no cards face-down stack -->
