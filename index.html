@@ -67,8 +67,8 @@
         .stack-label { font-size: 0.8rem; color: #888; text-align: center; }
 
         .current-card-area { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .current-card-area .card { width: 260px; height: 182px; }
-        .current-card-area .card img { border: 3px solid rgba(255,215,0,0.4); }
+        .current-card-area .card { width: 260px; height: auto; }
+        .current-card-area .card img { border: 3px solid rgba(255,215,0,0.4); height: auto; object-fit: initial; background: none; }
 
         /* Pile zones */
         .pile-zone {
@@ -173,8 +173,8 @@
             display: flex; flex-direction: column; align-items: center; gap: 8px;
             padding: 6px 0; flex-shrink: 0;
         }
-        .s2-center .current-card-area .card { width: 240px; height: 168px; }
-        .s2-center .current-card-area .card img { border: 3px solid rgba(255,215,0,0.4); border-radius: 10px; }
+        .s2-center .current-card-area .card { width: 240px; height: auto; }
+        .s2-center .current-card-area .card img { border: 3px solid rgba(255,215,0,0.4); border-radius: 10px; height: auto; object-fit: initial; background: none; }
         .s2-center .action-row { display: flex; gap: 10px; }
         .s2-stack-info { font-size: 0.8rem; color: #888; }
         .s2-maybe-side { flex: 1; min-width: 0; }
