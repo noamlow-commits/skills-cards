@@ -494,6 +494,7 @@ function s1Sort(where){
     document.getElementById('s1-btn-keep').style.display='none';
     document.getElementById('s1-btn-toss').style.display='none';
     updateS1();
+    if(S.stack.length>0) setTimeout(flipNext1,300);
 }
 
 function addStackCard(wrapId,cardId,faceDown){
