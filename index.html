@@ -91,7 +91,7 @@
         /* ========== STEP 1: Card table layout ========== */
         .s1-table {
             display: flex; align-items: center; justify-content: center;
-            gap: 40px; width: 100%; flex: 1; min-height: 320px;
+            gap: 40px; width: 100%;
             padding: 10px 20px;
         }
         .s1-pile {
@@ -145,34 +145,35 @@
             .s1-pile .btn { width: auto; }
         }
 
-        /* ========== STEP 2: Spread layout ========== */
-        .s2-target {
-            display: flex; align-items: center; gap: 12px;
-            padding: 10px 20px; border-radius: 14px; transition: all 0.3s;
-            width: 100%; justify-content: center; min-height: 70px;
+        /* ========== STEP 2: Stack center + spread targets ========== */
+        .s2-zone {
+            width: 100%; min-height: 60px; padding: 8px 10px;
+            border-radius: 14px; transition: all 0.3s;
+            display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start;
+            justify-content: center; position: relative;
         }
-        .s2-target.drag-over {
+        .s2-zone.drag-over {
             background: rgba(255,255,255,0.06);
             box-shadow: 0 0 25px rgba(255,215,0,0.15);
         }
-        .s2-target-label { font-size: 1rem; font-weight: bold; white-space: nowrap; }
-        .s2-target .pile-count { font-size: 0.8rem; color: #666; }
-        .s2-target .pile-stack-wrap {
-            position: relative; width: 140px; height: 98px; flex-shrink: 0;
+        .s2-zone-header {
+            width: 100%; text-align: center; font-size: 0.95rem; font-weight: bold;
+            margin-bottom: 2px;
         }
-        .s2-target .pile-stack-wrap .card {
-            position: absolute; top: 0; right: 0;
-            width: 140px; height: 98px; transition: none;
+        .s2-zone .pile-count {
+            position: absolute; bottom: 4px; left: 10px; font-size: 0.75rem; color: #666;
         }
-        .s2-target .pile-stack-wrap .card img {
-            width: 100%; height: 100%; border-radius: 8px;
+        .s2-zone .card.small { width: 110px; height: 77px; }
+        .s2-zone .card.small img { border-radius: 6px; }
+
+        .s2-center {
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            padding: 6px 0;
         }
-        .spread-zone {
-            width: 100%; display: flex; flex-wrap: wrap; gap: 8px;
-            justify-content: center; padding: 6px 0;
-        }
-        .spread-zone .card.small { width: 130px; height: 91px; }
-        .spread-zone .card.small img { border-radius: 8px; }
+        .s2-center .current-card-area .card { width: 220px; height: 154px; }
+        .s2-center .current-card-area .card img { border: 3px solid rgba(255,215,0,0.4); border-radius: 10px; }
+        .s2-center .action-row { display: flex; gap: 12px; }
+        .s2-stack-info { font-size: 0.8rem; color: #888; }
 
         /* Buttons */
         .action-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
@@ -339,26 +340,34 @@
     <button class="btn btn-primary" id="s1-next" style="display:none;" onclick="startStep2()">סיימתי לסנן - המשך</button>
 </div>
 
-<!-- STEP 2: Pick 10 favorites from spread cards -->
+<!-- STEP 2: Pick 10 favorites -->
 <div id="step2" class="board">
     <div class="step-bar"><div class="step-pip done"></div><div class="step-pip active"></div><div class="step-pip"></div><div class="step-pip"></div></div>
     <div class="board-header">
         <h1>שלב 2: בחרו 10 יכולות אהובות</h1>
-        <h2>גררו למעלה ל"אהובות" את 10 היכולות שאתם הכי אוהבים.<br>את השאר גררו למטה ל"אולי". אפשר להתחרט ולגרור בין האזורים.</h2>
+        <h2>הכרטיסים מוצגים אחד אחד. גררו למעלה ל"אהובות" או למטה ל"אולי".<br>אפשר גם ללחוץ על הכפתורים. אפשר להתחרט ולגרור בין האזורים.</h2>
     </div>
     <div class="counter-badge" id="s2-counter">נבחרו 0 מתוך 10</div>
 
-    <div class="s2-target" id="s2-love" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'love')">
-        <div class="s2-target-label" style="color:#f39c12;">★ אהובות</div>
-        <div class="pile-stack-wrap" id="s2-love-stack"></div>
+    <!-- Top: loved cards spread in rows -->
+    <div class="s2-zone" id="s2-love" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'love')">
+        <div class="s2-zone-header" style="color:#f39c12;">★ אהובות</div>
         <div class="pile-count" id="s2-love-count">0</div>
     </div>
 
-    <div class="spread-zone" id="s2-spread"></div>
+    <!-- Center: face-up stack showing one card -->
+    <div class="s2-center">
+        <div class="current-card-area" id="s2-current"></div>
+        <div class="action-row" id="s2-actions" style="display:none;">
+            <button class="btn btn-love" onclick="s2Sort('love')">אהובות ★</button>
+            <button class="btn btn-discard" onclick="s2Sort('toss')">אולי</button>
+        </div>
+        <div class="s2-stack-info" id="s2-stack-info"></div>
+    </div>
 
-    <div class="s2-target" id="s2-toss" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'toss')">
-        <div class="s2-target-label" style="color:#95a5a6;">אולי</div>
-        <div class="pile-stack-wrap" id="s2-toss-stack"></div>
+    <!-- Bottom: maybe cards spread in rows -->
+    <div class="s2-zone" id="s2-toss" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'toss')">
+        <div class="s2-zone-header" style="color:#95a5a6;">אולי</div>
         <div class="pile-count" id="s2-toss-count">0</div>
     </div>
 
@@ -570,22 +579,43 @@ function dropS1(e,where){
     }
 }
 
-// ========== STEP 2: Spread cards, pick 10 favorites ==========
+// ========== STEP 2: Face-up stack, spread targets ==========
 function startStep2(){
-    S.spread=shuffle(S.kept);
+    S.s2stack=shuffle(S.kept);
+    S.s2cur=null;
     S.loved=[];S.spreadToss=[];
     showBoard('step2');
-    document.getElementById('s2-love-stack').innerHTML='';
-    document.getElementById('s2-toss-stack').innerHTML='';
+    renderS2Zone('s2-love',S.loved);
+    renderS2Zone('s2-toss',S.spreadToss);
+    document.getElementById('s2-current').innerHTML='';
+    document.getElementById('s2-actions').style.display='none';
     document.getElementById('s2-next').style.display='none';
-    renderSpread();
+    updateS2();
+    showNextS2();
+}
+
+function showNextS2(){
+    if(S.s2stack.length===0){
+        document.getElementById('s2-current').innerHTML='';
+        document.getElementById('s2-actions').style.display='none';
+        document.getElementById('s2-stack-info').textContent='אין עוד כרטיסים';
+        return;
+    }
+    S.s2cur=S.s2stack.pop();
+    const card=CARDS.find(c=>c.id===S.s2cur);
+    const area=document.getElementById('s2-current');
+    area.innerHTML=`<div class="card card-pop" id="cur2" draggable="true" ondragstart="dragStart(event,${card.id})" data-id="${card.id}">
+        <img src="${cardImg(card.id)}" alt="${card.text}"></div>`;
+    addTouchDrag(document.getElementById('cur2'));
+    document.getElementById('s2-actions').style.display='flex';
     updateS2();
 }
 
-function renderSpread(){
-    const zone=document.getElementById('s2-spread');
-    zone.innerHTML='';
-    S.spread.forEach(id=>{
+function renderS2Zone(zoneId,arr){
+    const zone=document.getElementById(zoneId);
+    // Keep header and pile-count, remove cards
+    zone.querySelectorAll('.card').forEach(c=>c.remove());
+    arr.forEach(id=>{
         const d=document.createElement('div');
         d.className='card small';d.dataset.id=id;d.draggable=true;
         d.innerHTML=`<img src="${cardImg(id)}" alt="">`;
@@ -596,54 +626,50 @@ function renderSpread(){
 }
 
 function updateS2(){
-    document.getElementById('s2-counter').textContent=`נבחרו ${S.loved.length} מתוך 10 | נותרו על הלוח: ${S.spread.length}`;
+    const rem=S.s2stack.length+(S.s2cur?1:0);
+    document.getElementById('s2-counter').textContent=`נבחרו ${S.loved.length} מתוך 10 | נותרו: ${rem}`;
     document.getElementById('s2-love-count').textContent=S.loved.length;
     document.getElementById('s2-toss-count').textContent=S.spreadToss.length;
+    document.getElementById('s2-stack-info').textContent=S.s2stack.length>0?`עוד ${S.s2stack.length} בחבילה`:'';
     document.getElementById('s2-next').style.display=S.loved.length===10?'':'none';
+}
+
+function s2Sort(where){
+    if(S.s2cur===null)return;
+    const id=S.s2cur;
+    if(where==='love'&&S.loved.length<10){S.loved.push(id);}
+    else{S.spreadToss.push(id);}
+    S.s2cur=null;
+    renderS2Zone('s2-love',S.loved);
+    renderS2Zone('s2-toss',S.spreadToss);
+    document.getElementById('s2-current').innerHTML='';
+    document.getElementById('s2-actions').style.display='none';
+    updateS2();
+    if(S.s2stack.length>0&&S.loved.length<10) setTimeout(showNextS2,300);
+    else if(S.loved.length>=10){document.getElementById('s2-stack-info').textContent='בחרתם 10!';}
 }
 
 function dropS2(e,where){
     e.preventDefault();e.currentTarget.classList.remove('drag-over');
     if(dragCardId===null)return;
     const id=dragCardId;dragCardId=null;
-    // From spread
-    let idx=S.spread.indexOf(id);
-    if(idx>-1){
-        S.spread.splice(idx,1);
-        if(where==='love'&&S.loved.length<10){S.loved.push(id);addStackCard('s2-love-stack',id,false);}
-        else{S.spreadToss.push(id);addStackCard('s2-toss-stack',id,false);}
-        renderSpread();updateS2();return;
-    }
+    // Current card
+    if(S.s2cur===id){s2Sort(where);return;}
     // From love to toss
-    idx=S.loved.indexOf(id);
+    let idx=S.loved.indexOf(id);
     if(where==='toss'&&idx>-1){
         S.loved.splice(idx,1);S.spreadToss.push(id);
-        removeStackCard('s2-love-stack',id);addStackCard('s2-toss-stack',id,false);
+        renderS2Zone('s2-love',S.loved);renderS2Zone('s2-toss',S.spreadToss);
         updateS2();return;
     }
     // From toss to love
     idx=S.spreadToss.indexOf(id);
     if(where==='love'&&idx>-1&&S.loved.length<10){
         S.spreadToss.splice(idx,1);S.loved.push(id);
-        removeStackCard('s2-toss-stack',id);addStackCard('s2-love-stack',id,false);
+        renderS2Zone('s2-love',S.loved);renderS2Zone('s2-toss',S.spreadToss);
         updateS2();return;
     }
 }
-
-// Allow dropping back onto the spread zone
-document.addEventListener('DOMContentLoaded',()=>{
-    const sp=document.getElementById('s2-spread');
-    sp.addEventListener('dragover',e=>{e.preventDefault();});
-    sp.addEventListener('drop',e=>{
-        e.preventDefault();
-        if(dragCardId===null)return;
-        const id=dragCardId;dragCardId=null;
-        let idx=S.loved.indexOf(id);
-        if(idx>-1){S.loved.splice(idx,1);S.spread.push(id);removeStackCard('s2-love-stack',id);renderSpread();updateS2();return;}
-        idx=S.spreadToss.indexOf(id);
-        if(idx>-1){S.spreadToss.splice(idx,1);S.spread.push(id);removeStackCard('s2-toss-stack',id);renderSpread();updateS2();return;}
-    });
-});
 
 // ========== HELPERS ==========
 function dragStart(e,id){dragCardId=id;e.dataTransfer.effectAllowed='move';}
@@ -662,7 +688,7 @@ function addTouchDrag(el){
     el.addEventListener('touchmove',e=>{
         e.preventDefault();const t=e.touches[0];
         if(clone){clone.style.left=(t.clientX-60)+'px';clone.style.top=(t.clientY-40)+'px';}
-        document.querySelectorAll('.pile-zone,.spread-zone,.s1-pile,.s2-target').forEach(z=>{
+        document.querySelectorAll('.pile-zone,.s1-pile,.s2-zone').forEach(z=>{
             const r=z.getBoundingClientRect();
             if(t.clientX>=r.left&&t.clientX<=r.right&&t.clientY>=r.top&&t.clientY<=r.bottom)z.classList.add('drag-over');
             else z.classList.remove('drag-over');
@@ -671,7 +697,7 @@ function addTouchDrag(el){
     el.addEventListener('touchend',e=>{
         if(clone){clone.remove();clone=null;}
         el.classList.remove('dragging');
-        const zone=document.querySelector('.pile-zone.drag-over,.spread-zone.drag-over,.s1-pile.drag-over,.s2-target.drag-over');
+        const zone=document.querySelector('.pile-zone.drag-over,.s1-pile.drag-over,.s2-zone.drag-over');
         if(zone){zone.classList.remove('drag-over');zone.dispatchEvent(new Event('drop'));}
         dragCardId=null;
     });
