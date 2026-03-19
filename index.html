@@ -175,6 +175,27 @@
         .s2-center .action-row { display: flex; gap: 12px; }
         .s2-stack-info { font-size: 0.8rem; color: #888; }
 
+        /* Face-down stack zone for "no" pile */
+        .s2-zone-stack {
+            width: 100%; padding: 8px 10px; border-radius: 14px;
+            transition: all 0.3s; display: flex; align-items: center;
+            justify-content: center; gap: 12px; min-height: 60px; position: relative;
+        }
+        .s2-zone-stack.drag-over {
+            background: rgba(255,255,255,0.06);
+            box-shadow: 0 0 25px rgba(255,215,0,0.15);
+        }
+        .s2-zone-stack .pile-stack-wrap {
+            position: relative; width: 110px; height: 77px;
+        }
+        .s2-zone-stack .pile-stack-wrap .card {
+            position: absolute; top: 0; right: 0;
+            width: 110px; height: 77px; transition: none;
+        }
+        .s2-zone-stack .pile-stack-wrap .card img {
+            width: 100%; height: 100%; border-radius: 6px;
+        }
+
         /* Buttons */
         .action-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
         .btn {
@@ -345,13 +366,13 @@
     <div class="step-bar"><div class="step-pip done"></div><div class="step-pip active"></div><div class="step-pip"></div><div class="step-pip"></div></div>
     <div class="board-header">
         <h1>שלב 2: בחרו 10 יכולות אהובות</h1>
-        <h2>הכרטיסים מוצגים אחד אחד. גררו למעלה ל"אהובות" או למטה ל"אולי".<br>אפשר גם ללחוץ על הכפתורים. אפשר להתחרט ולגרור בין האזורים.</h2>
+        <h2>הכרטיסים מוצגים אחד אחד. בחרו "כן", "אולי" או "לא".<br>אפשר להתחרט ולגרור קלפים בין האזורים.</h2>
     </div>
     <div class="counter-badge" id="s2-counter">נבחרו 0 מתוך 10</div>
 
-    <!-- Top: loved cards spread in rows -->
+    <!-- Top: loved cards spread in rows (face up) -->
     <div class="s2-zone" id="s2-love" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'love')">
-        <div class="s2-zone-header" style="color:#f39c12;">★ אהובות</div>
+        <div class="s2-zone-header" style="color:#f39c12;">★ כן — אהובות</div>
         <div class="pile-count" id="s2-love-count">0</div>
     </div>
 
@@ -359,16 +380,24 @@
     <div class="s2-center">
         <div class="current-card-area" id="s2-current"></div>
         <div class="action-row" id="s2-actions" style="display:none;">
-            <button class="btn btn-love" onclick="s2Sort('love')">אהובות ★</button>
-            <button class="btn btn-discard" onclick="s2Sort('toss')">אולי</button>
+            <button class="btn btn-love" onclick="s2Sort('love')">כן ★</button>
+            <button class="btn btn-secondary" onclick="s2Sort('maybe')">אולי</button>
+            <button class="btn btn-discard" onclick="s2Sort('no')">לא ✗</button>
         </div>
         <div class="s2-stack-info" id="s2-stack-info"></div>
     </div>
 
-    <!-- Bottom: maybe cards spread in rows -->
-    <div class="s2-zone" id="s2-toss" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'toss')">
-        <div class="s2-zone-header" style="color:#95a5a6;">אולי</div>
-        <div class="pile-count" id="s2-toss-count">0</div>
+    <!-- Middle: maybe cards spread in rows (face up) -->
+    <div class="s2-zone" id="s2-maybe" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'maybe')">
+        <div class="s2-zone-header" style="color:#3498db;">אולי</div>
+        <div class="pile-count" id="s2-maybe-count">0</div>
+    </div>
+
+    <!-- Bottom: no cards face-down stack -->
+    <div class="s2-zone-stack" id="s2-no" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'no')">
+        <div class="s2-zone-header" style="color:#e74c3c; width:auto;">לא ✗</div>
+        <div class="pile-stack-wrap" id="s2-no-stack"></div>
+        <div class="pile-count" id="s2-no-count" style="position:static;">0</div>
     </div>
 
     <button class="btn btn-primary" id="s2-next" style="display:none;" onclick="startStep3()">המשך לדירוג</button>
@@ -579,14 +608,15 @@ function dropS1(e,where){
     }
 }
 
-// ========== STEP 2: Face-up stack, spread targets ==========
+// ========== STEP 2: 3 piles — כן, אולי, לא ==========
 function startStep2(){
     S.s2stack=shuffle(S.kept);
     S.s2cur=null;
-    S.loved=[];S.spreadToss=[];
+    S.loved=[];S.maybe=[];S.rejected=[];
     showBoard('step2');
     renderS2Zone('s2-love',S.loved);
-    renderS2Zone('s2-toss',S.spreadToss);
+    renderS2Zone('s2-maybe',S.maybe);
+    document.getElementById('s2-no-stack').innerHTML='';
     document.getElementById('s2-current').innerHTML='';
     document.getElementById('s2-actions').style.display='none';
     document.getElementById('s2-next').style.display='none';
@@ -613,7 +643,6 @@ function showNextS2(){
 
 function renderS2Zone(zoneId,arr){
     const zone=document.getElementById(zoneId);
-    // Keep header and pile-count, remove cards
     zone.querySelectorAll('.card').forEach(c=>c.remove());
     arr.forEach(id=>{
         const d=document.createElement('div');
@@ -625,11 +654,20 @@ function renderS2Zone(zoneId,arr){
     });
 }
 
+function renderS2All(){
+    renderS2Zone('s2-love',S.loved);
+    renderS2Zone('s2-maybe',S.maybe);
+    // Rebuild no stack
+    document.getElementById('s2-no-stack').innerHTML='';
+    S.rejected.forEach(id=>addStackCard('s2-no-stack',id,true));
+}
+
 function updateS2(){
     const rem=S.s2stack.length+(S.s2cur?1:0);
     document.getElementById('s2-counter').textContent=`נבחרו ${S.loved.length} מתוך 10 | נותרו: ${rem}`;
     document.getElementById('s2-love-count').textContent=S.loved.length;
-    document.getElementById('s2-toss-count').textContent=S.spreadToss.length;
+    document.getElementById('s2-maybe-count').textContent=S.maybe.length;
+    document.getElementById('s2-no-count').textContent=S.rejected.length;
     document.getElementById('s2-stack-info').textContent=S.s2stack.length>0?`עוד ${S.s2stack.length} בחבילה`:'';
     document.getElementById('s2-next').style.display=S.loved.length===10?'':'none';
 }
@@ -637,16 +675,26 @@ function updateS2(){
 function s2Sort(where){
     if(S.s2cur===null)return;
     const id=S.s2cur;
-    if(where==='love'&&S.loved.length<10){S.loved.push(id);}
-    else{S.spreadToss.push(id);}
+    if(where==='love'&&S.loved.length<10) S.loved.push(id);
+    else if(where==='maybe') S.maybe.push(id);
+    else S.rejected.push(id);
     S.s2cur=null;
-    renderS2Zone('s2-love',S.loved);
-    renderS2Zone('s2-toss',S.spreadToss);
+    renderS2All();
     document.getElementById('s2-current').innerHTML='';
     document.getElementById('s2-actions').style.display='none';
     updateS2();
     if(S.s2stack.length>0&&S.loved.length<10) setTimeout(showNextS2,300);
     else if(S.loved.length>=10){document.getElementById('s2-stack-info').textContent='בחרתם 10!';}
+}
+
+function s2FindAndRemove(id){
+    let idx=S.loved.indexOf(id);
+    if(idx>-1){S.loved.splice(idx,1);return 'love';}
+    idx=S.maybe.indexOf(id);
+    if(idx>-1){S.maybe.splice(idx,1);return 'maybe';}
+    idx=S.rejected.indexOf(id);
+    if(idx>-1){S.rejected.splice(idx,1);return 'no';}
+    return null;
 }
 
 function dropS2(e,where){
@@ -655,20 +703,14 @@ function dropS2(e,where){
     const id=dragCardId;dragCardId=null;
     // Current card
     if(S.s2cur===id){s2Sort(where);return;}
-    // From love to toss
-    let idx=S.loved.indexOf(id);
-    if(where==='toss'&&idx>-1){
-        S.loved.splice(idx,1);S.spreadToss.push(id);
-        renderS2Zone('s2-love',S.loved);renderS2Zone('s2-toss',S.spreadToss);
-        updateS2();return;
-    }
-    // From toss to love
-    idx=S.spreadToss.indexOf(id);
-    if(where==='love'&&idx>-1&&S.loved.length<10){
-        S.spreadToss.splice(idx,1);S.loved.push(id);
-        renderS2Zone('s2-love',S.loved);renderS2Zone('s2-toss',S.spreadToss);
-        updateS2();return;
-    }
+    // Move between piles
+    const from=s2FindAndRemove(id);
+    if(!from)return;
+    if(where==='love'&&S.loved.length<10) S.loved.push(id);
+    else if(where==='maybe') S.maybe.push(id);
+    else if(where==='no') S.rejected.push(id);
+    else{/* overflow to maybe */ S.maybe.push(id);}
+    renderS2All();updateS2();
 }
 
 // ========== HELPERS ==========
@@ -688,7 +730,7 @@ function addTouchDrag(el){
     el.addEventListener('touchmove',e=>{
         e.preventDefault();const t=e.touches[0];
         if(clone){clone.style.left=(t.clientX-60)+'px';clone.style.top=(t.clientY-40)+'px';}
-        document.querySelectorAll('.pile-zone,.s1-pile,.s2-zone').forEach(z=>{
+        document.querySelectorAll('.pile-zone,.s1-pile,.s2-zone,.s2-zone-stack').forEach(z=>{
             const r=z.getBoundingClientRect();
             if(t.clientX>=r.left&&t.clientX<=r.right&&t.clientY>=r.top&&t.clientY<=r.bottom)z.classList.add('drag-over');
             else z.classList.remove('drag-over');
@@ -697,7 +739,7 @@ function addTouchDrag(el){
     el.addEventListener('touchend',e=>{
         if(clone){clone.remove();clone=null;}
         el.classList.remove('dragging');
-        const zone=document.querySelector('.pile-zone.drag-over,.s1-pile.drag-over,.s2-zone.drag-over');
+        const zone=document.querySelector('.pile-zone.drag-over,.s1-pile.drag-over,.s2-zone.drag-over,.s2-zone-stack.drag-over');
         if(zone){zone.classList.remove('drag-over');zone.dispatchEvent(new Event('drop'));}
         dragCardId=null;
     });
