@@ -145,9 +145,22 @@
             .s1-pile .btn { width: auto; }
         }
 
-        /* ========== STEP 2: Stack center + spread targets ========== */
+        /* ========== STEP 2: Card table with 3 zones around center ========== */
+        .s2-grid {
+            display: grid; width: 100%;
+            grid-template-columns: 1fr auto;
+            grid-template-rows: auto auto;
+            gap: 10px;
+        }
+        /* Top row: אהובות spans full width */
+        .s2-grid-love { grid-column: 1 / -1; }
+        /* Bottom-right (RTL): center card */
+        .s2-grid-center { justify-self: center; }
+        /* Bottom-left (RTL): אולי */
+        .s2-grid-maybe { }
+
         .s2-zone {
-            width: 100%; min-height: 60px; padding: 8px 10px;
+            min-height: 60px; padding: 8px 10px;
             border-radius: 14px; transition: all 0.3s;
             display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start;
             justify-content: center; position: relative;
@@ -166,39 +179,40 @@
         .s2-zone .card.small { width: 130px; height: 91px; }
         .s2-zone .card.small img { border-radius: 8px; }
 
-        .s2-middle {
-            display: flex; gap: 20px; width: 100%; align-items: flex-start;
-        }
         .s2-center {
             display: flex; flex-direction: column; align-items: center; gap: 8px;
-            padding: 6px 0; flex-shrink: 0;
+            padding: 6px 0;
         }
         .s2-center .current-card-area .card { width: 240px; height: auto; }
         .s2-center .current-card-area .card img { border: 3px solid rgba(255,215,0,0.4); border-radius: 10px; height: auto; object-fit: initial; background: none; }
         .s2-center .action-row { display: flex; gap: 10px; }
         .s2-stack-info { font-size: 0.8rem; color: #888; }
-        .s2-maybe-side { flex: 1; min-width: 0; }
-        .s2-maybe-side .s2-zone { width: 100%; min-height: 100px; }
 
         /* Face-down stack zone for "no" pile */
         .s2-zone-stack {
-            width: 100%; padding: 8px 10px; border-radius: 14px;
+            padding: 8px 10px; border-radius: 14px;
             transition: all 0.3s; display: flex; align-items: center;
             justify-content: center; gap: 12px; min-height: 60px; position: relative;
+            grid-column: 1 / -1;
         }
         .s2-zone-stack.drag-over {
             background: rgba(255,255,255,0.06);
             box-shadow: 0 0 25px rgba(255,215,0,0.15);
         }
         .s2-zone-stack .pile-stack-wrap {
-            position: relative; width: 110px; height: 77px;
+            position: relative; width: 130px; height: 91px;
         }
         .s2-zone-stack .pile-stack-wrap .card {
             position: absolute; top: 0; right: 0;
-            width: 110px; height: 77px; transition: none;
+            width: 130px; height: 91px; transition: none;
         }
         .s2-zone-stack .pile-stack-wrap .card img {
-            width: 100%; height: 100%; border-radius: 6px;
+            width: 100%; height: 100%; border-radius: 8px;
+        }
+
+        @media (max-width: 700px) {
+            .s2-grid { grid-template-columns: 1fr; }
+            .s2-grid-center { grid-column: 1; }
         }
 
         /* Buttons */
@@ -375,38 +389,42 @@
     </div>
     <div class="counter-badge" id="s2-counter">נבחרו 0 מתוך 10</div>
 
-    <!-- Top: loved cards spread in rows (face up) -->
-    <div class="s2-zone" id="s2-love" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'love')">
-        <div class="s2-zone-header" style="color:#f39c12;">★ כן — אהובות</div>
-        <div class="pile-count" id="s2-love-count">0</div>
-    </div>
-
-    <div class="s2-middle">
-        <!-- Right (RTL): current card + buttons -->
-        <div class="s2-center">
-            <div class="current-card-area" id="s2-current"></div>
-            <div class="action-row" id="s2-actions" style="display:none;">
-                <button class="btn btn-love" onclick="s2Sort('love')">כן ★</button>
-                <button class="btn btn-secondary" onclick="s2Sort('maybe')">אולי</button>
-                <button class="btn btn-discard" onclick="s2Sort('no')">לא ✗</button>
+    <div class="s2-grid">
+        <!-- Top row: אהובות (full width, spread face-up) -->
+        <div class="s2-grid-love">
+            <div class="s2-zone" id="s2-love" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'love')">
+                <div class="s2-zone-header" style="color:#f39c12;">★ כן — אהובות</div>
+                <div class="pile-count" id="s2-love-count">0</div>
             </div>
-            <div class="s2-stack-info" id="s2-stack-info"></div>
         </div>
 
-        <!-- Left (RTL): maybe cards spread -->
-        <div class="s2-maybe-side">
+        <!-- Center card + buttons (right side in RTL) -->
+        <div class="s2-grid-center">
+            <div class="s2-center">
+                <div class="current-card-area" id="s2-current"></div>
+                <div class="action-row" id="s2-actions" style="display:none;">
+                    <button class="btn btn-love" onclick="s2Sort('love')">כן ★</button>
+                    <button class="btn btn-secondary" onclick="s2Sort('maybe')">אולי</button>
+                    <button class="btn btn-discard" onclick="s2Sort('no')">לא ✗</button>
+                </div>
+                <div class="s2-stack-info" id="s2-stack-info"></div>
+            </div>
+        </div>
+
+        <!-- אולי (left side in RTL, spread face-up) -->
+        <div class="s2-grid-maybe">
             <div class="s2-zone" id="s2-maybe" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'maybe')">
                 <div class="s2-zone-header" style="color:#3498db;">אולי</div>
                 <div class="pile-count" id="s2-maybe-count">0</div>
             </div>
         </div>
-    </div>
 
-    <!-- Bottom: no cards face-down stack -->
-    <div class="s2-zone-stack" id="s2-no" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'no')">
-        <div class="s2-zone-header" style="color:#e74c3c; width:auto;">לא ✗</div>
-        <div class="pile-stack-wrap" id="s2-no-stack"></div>
-        <div class="pile-count" id="s2-no-count" style="position:static;">0</div>
+        <!-- Bottom: לא (full width, face-down stack) -->
+        <div class="s2-zone-stack" id="s2-no" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS2(event,'no')">
+            <div class="s2-zone-header" style="color:#e74c3c; width:auto;">לא ✗</div>
+            <div class="pile-stack-wrap" id="s2-no-stack"></div>
+            <div class="pile-count" id="s2-no-count" style="position:static;">0</div>
+        </div>
     </div>
 
     <button class="btn btn-primary" id="s2-next" style="display:none;" onclick="startStep3()">המשך לדירוג</button>
