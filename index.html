@@ -115,14 +115,17 @@
 
         /* Bigger stack cards for step 1 piles */
         .s1-pile .pile-stack-wrap {
-            position: relative; width: 180px; height: 126px;
+            position: relative; width: 220px; height: 154px;
         }
         .s1-pile .pile-stack-wrap .card {
             position: absolute; top: 0; right: 0;
-            width: 180px; height: 126px; transition: none;
+            width: 220px; height: 154px; transition: none;
         }
         .s1-pile .pile-stack-wrap .card img {
             width: 100%; height: 100%; border-radius: 10px;
+        }
+        .s1-pile .btn {
+            width: 100%; padding: 10px 20px; font-size: 0.95rem;
         }
 
         /* Default pile-stack-wrap for other contexts */
@@ -134,11 +137,12 @@
             transition: none;
         }
 
-        @media (max-width: 800px) {
+        @media (max-width: 900px) {
             .s1-table { flex-direction: column; gap: 20px; }
             .s1-pile { min-width: auto; flex-direction: row; gap: 16px; padding: 12px; }
-            .s1-pile .pile-stack-wrap { width: 140px; height: 98px; }
-            .s1-pile .pile-stack-wrap .card { width: 140px; height: 98px; }
+            .s1-pile .pile-stack-wrap { width: 160px; height: 112px; }
+            .s1-pile .pile-stack-wrap .card { width: 160px; height: 112px; }
+            .s1-pile .btn { width: auto; }
         }
 
         /* Spread zone - cards laid out on board (step 2) */
@@ -282,6 +286,7 @@
     <div class="s1-table">
         <!-- Right (RTL): kept pile -->
         <div class="s1-pile keep-pile" id="s1-kept" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS1(event,'keep')">
+            <button class="btn btn-keep s1-pile-btn" id="s1-btn-keep" onclick="s1Sort('keep')" style="display:none;">נשאר ✓</button>
             <div class="s1-pile-label">נשאר ✓</div>
             <div class="pile-stack-wrap" id="s1-kept-stack"></div>
             <div class="pile-count" id="s1-kept-count">0</div>
@@ -297,14 +302,11 @@
                 <div class="stack-label" id="s1-stack-label">לחצו לגלות</div>
             </div>
             <div class="current-card-area" id="s1-current"></div>
-            <div class="action-row" id="s1-actions" style="display:none;">
-                <button class="btn btn-keep" onclick="s1Sort('keep')">נשאר ✓</button>
-                <button class="btn btn-discard" onclick="s1Sort('toss')">בטוח לא ✗</button>
-            </div>
         </div>
 
         <!-- Left (RTL): discard pile -->
         <div class="s1-pile toss-pile" id="s1-toss" ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dropS1(event,'toss')">
+            <button class="btn btn-discard s1-pile-btn" id="s1-btn-toss" onclick="s1Sort('toss')" style="display:none;">בטוח לא ✗</button>
             <div class="s1-pile-label">בטוח לא ✗</div>
             <div class="pile-stack-wrap" id="s1-toss-stack"></div>
             <div class="pile-count" id="s1-toss-count">0</div>
@@ -442,7 +444,8 @@ function startStep1(){
     S={stack:shuffle(CARDS).map(c=>c.id),kept:[],tossed:[],cur:null,loved:[],spread:[],spreadToss:[],ranked:[]};
     showBoard('step1');
     document.getElementById('s1-current').innerHTML='';
-    document.getElementById('s1-actions').style.display='none';
+    document.getElementById('s1-btn-keep').style.display='none';
+    document.getElementById('s1-btn-toss').style.display='none';
     document.getElementById('s1-toss-stack').innerHTML='';
     document.getElementById('s1-kept-stack').innerHTML='';
     document.getElementById('s1-next').style.display='none';
@@ -476,7 +479,8 @@ function flipNext1(){
     area.innerHTML=`<div class="card card-pop" id="cur1" draggable="true" ondragstart="dragStart(event,${card.id})" data-id="${card.id}">
         <img src="${cardImg(card.id)}" alt="${card.text}"></div>`;
     addTouchDrag(document.getElementById('cur1'));
-    document.getElementById('s1-actions').style.display='flex';
+    document.getElementById('s1-btn-keep').style.display='';
+    document.getElementById('s1-btn-toss').style.display='';
     updateS1();
 }
 
@@ -487,7 +491,8 @@ function s1Sort(where){
     else{S.kept.push(id);addStackCard('s1-kept-stack',id,false);}
     S.cur=null;
     document.getElementById('s1-current').innerHTML='';
-    document.getElementById('s1-actions').style.display='none';
+    document.getElementById('s1-btn-keep').style.display='none';
+    document.getElementById('s1-btn-toss').style.display='none';
     updateS1();
 }
 
